@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>J.A.R.V.I.S. v3.0 — Stark Industries</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600&display=swap');
+
+  :root {
+    --cyan: #00d4ff;
+    --cyan-dim: #0099bb;
+    --cyan-glow: rgba(0, 212, 255, 0.15);
+    --cyan-pulse: rgba(0, 212, 255, 0.4);
+    --orange: #ff6b00;
+    --orange-dim: #cc4400;
+    --red: #ff2244;
+    --green: #00ff88;
+    --bg: #000408;
+    --panel: rgba(0, 18, 30, 0.85);
+    --border: rgba(0, 212, 255, 0.25);
+    --border-bright: rgba(0, 212, 255, 0.6);
+    --text: #a0e8ff;
+    --text-dim: #4a8899;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* ── ANIMATED GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: gridPulse 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(0,60,100,0.2) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  .scanlines {
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+    animation: scanMove 12s linear infinite;
+  }
+
+  @keyframes scanMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #app {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-areas:
+      "header header header"
+      "left   center right"
+      "footer footer footer";
+    gap: 12px;
+    padding: 12px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    grid-area: header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border: 1px solid var(--border-bright);
+    background: var(--panel);
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.05), transparent);
+    animation: headerSweep 4s ease-in-out infinite;
+  }
+
+  @keyframes headerSweep {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,212,255,0.3);
+    letter-spacing: 4px;
+  }
+
+  .logo span { color: var(--orange); }
+
+  .header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    gap: 20px;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  .status-dot.orange { background: var(--orange); box-shadow: 0 0 6px var(--orange); animation-delay: 0.5s; }
+  .status-dot.cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); animation-delay: 1s; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  #live-clock {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: topline 3s ease-in-out infinite;
+  }
+
+  @keyframes topline {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--cyan-dim);
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before {
+    content: '◈';
+    color: var(--cyan);
+    font-size: 10px;
+  }
+
+  /* ── LEFT PANEL ── */
+  #left-panel {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ARC REACTOR */
+  .arc-reactor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 10px;
+  }
+
+  .reactor-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+  }
+
+  .reactor-ring svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+
+  .ring-outer {
+    animation: spinSlow 8s linear infinite;
+  }
+
+  .ring-mid {
+    animation: spinSlow 5s linear infinite reverse;
+  }
+
+  .ring-inner {
+    animation: spinSlow 3s linear infinite;
+  }
+
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); transform-origin: center; }
+    to { transform: rotate(360deg); transform-origin: center; }
+  }
+
+  .reactor-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: radial-gradient(circle, white 0%, var(--cyan) 40%, rgba(0,212,255,0.1) 100%);
+    box-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,212,255,0.5), 0 0 80px rgba(0,212,255,0.2);
+    animation: corePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes corePulse {
+    0%, 100% { box-shadow: 0 0 20px var(--cyan), 0 0 40px rgba(0,212,255,0.5); }
+    50% { box-shadow: 0 0 30px var(--cyan), 0 0 60px rgba(0,212,255,0.8), 0 0 100px rgba(0,212,255,0.3); }
+  }
+
+  .reactor-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--cyan-dim);
+    text-align: center;
+  }
+
+  .reactor-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    animation: countUp 3s ease-out forwards;
+  }
+
+  /* SYSTEM STATS */
+  .stat-row {
+    padding: 6px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .stat-bar-track {
+    height: 3px;
+    background: rgba(0,212,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+    border-radius: 2px;
+    box-shadow: 0 0 6px var(--cyan);
+    transition: width 1s ease;
+  }
+
+  .stat-bar-fill.orange-bar {
+    background: linear-gradient(90deg, var(--orange-dim), var(--orange));
+    box-shadow: 0 0 6px var(--orange);
+  }
+
+  /* QUICK CONTROLS */
+  .ctrl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .ctrl-btn {
+    background: rgba(0,212,255,0.05);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 10px 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+  }
+
+  .ctrl-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--cyan-glow);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .ctrl-btn:hover::before { opacity: 1; }
+  .ctrl-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan);
+    box-shadow: 0 0 12px rgba(0,212,255,0.2), inset 0 0 12px rgba(0,212,255,0.05);
+  }
+
+  .ctrl-btn:active {
+    transform: scale(0.96);
+    box-shadow: 0 0 20px rgba(0,212,255,0.5);
+  }
+
+  .ctrl-btn .btn-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+
+  .ctrl-btn.danger { border-color: rgba(255,34,68,0.3); color: #ff8899; }
+  .ctrl-btn.danger:hover { border-color: var(--red); color: var(--red); text-shadow: 0 0 8px var(--red); box-shadow: 0 0 12px rgba(255,34,68,0.2); }
+  .ctrl-btn.danger::before { background: rgba(255,34,68,0.05); }
+
+  .ctrl-btn.warn { border-color: rgba(255,107,0,0.3); color: #ffaa66; }
+  .ctrl-btn.warn:hover { border-color: var(--orange); color: var(--orange); text-shadow: 0 0 8px var(--orange); box-shadow: 0 0 12px rgba(255,107,0,0.2); }
+
+  /* ── CENTER PANEL ── */
+  #center-panel {
+    grid-area: center;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* WAVEFORM / LISTENING AREA */
+  .viz-panel {
+    flex: 0 0 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    gap: 12px;
+  }
+
+  #waveform-canvas {
+    width: 100%;
+    height: 60px;
+  }
+
+  .jarvis-state {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-shadow: 0 0 10px var(--cyan);
+    text-transform: uppercase;
+  }
+
+  .mic-btn {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    border: 2px solid var(--cyan);
+    background: rgba(0,212,255,0.08);
+    color: var(--cyan);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 0 15px rgba(0,212,255,0.2), inset 0 0 15px rgba(0,212,255,0.05);
+    position: relative;
+  }
+
+  .mic-btn.listening {
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: 0 0 25px rgba(255,107,0,0.5), inset 0 0 25px rgba(255,107,0,0.1);
+    animation: micPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes micPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  .mic-btn::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,212,255,0.2);
+    animation: ringExpand 2s ease-out infinite;
+  }
+
+  @keyframes ringExpand {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  /* TERMINAL / CONSOLE */
+  .console {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.8;
+    scrollbar-width: thin;
+    scrollbar-color: var(--cyan-dim) transparent;
+  }
+
+  #console-output::-webkit-scrollbar { width: 4px; }
+  #console-output::-webkit-scrollbar-track { background: transparent; }
+  #console-output::-webkit-scrollbar-thumb { background: var(--cyan-dim); border-radius: 2px; }
+
+  .log-line { display: flex; gap: 10px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+  .log-time { color: var(--text-dim); flex-shrink: 0; font-size: 10px; padding-top: 2px; }
+  .log-tag { flex-shrink: 0; font-size: 10px; padding: 1px 5px; border-radius: 2px; height: fit-content; }
+  .tag-jarvis { color: var(--cyan); border: 1px solid rgba(0,212,255,0.3); }
+  .tag-you { color: var(--orange); border: 1px solid rgba(255,107,0,0.3); }
+  .tag-sys { color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .tag-err { color: var(--red); border: 1px solid rgba(255,34,68,0.3); }
+  .log-text { color: var(--text); }
+
+  /* TEXT INPUT */
+  .input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  #text-input {
+    flex: 1;
+    background: rgba(0,212,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 1px;
+  }
+
+  #text-input:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 10px rgba(0,212,255,0.1);
+  }
+
+  #text-input::placeholder { color: var(--text-dim); }
+
+  .send-btn {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .send-btn:hover {
+    background: rgba(0,212,255,0.2);
+    box-shadow: 0 0 15px rgba(0,212,255,0.3);
+  }
+
+  /* ── RIGHT PANEL ── */
+  #right-panel {
+    grid-area: right;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* RADAR */
+  .radar-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 16px;
+    position: relative;
+  }
+
+  #radar-canvas {
+    border-radius: 50%;
+  }
+
+  /* COMMAND GRID */
+  .cmd-list {
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cmd-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  .cmd-item:hover {
+    border-color: var(--border);
+    background: var(--cyan-glow);
+    color: var(--cyan);
+    padding-left: 14px;
+  }
+
+  .cmd-item .cmd-key {
+    font-family: 'Orbitron', monospace;
+    font-size: 8px;
+    color: var(--cyan-dim);
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  /* VOLUME CONTROL */
+  .vol-ctrl {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .vol-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .vol-label { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; width: 50px; }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 3px;
+    background: rgba(0,212,255,0.2);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+    cursor: pointer;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    grid-area: footer;
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .footer-ticker {
+    overflow: hidden;
+    flex: 1;
+    margin: 0 20px;
+  }
+
+  .ticker-inner {
+    white-space: nowrap;
+    animation: ticker 20s linear infinite;
+    color: rgba(0,212,255,0.4);
+    font-size: 9px;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(100%); }
+    to { transform: translateX(-100%); }
+  }
+
+  /* ── NOTIFICATIONS ── */
+  .notif {
+    position: fixed;
+    top: 80px; right: 20px;
+    background: rgba(0,18,30,0.95);
+    border: 1px solid var(--cyan);
+    padding: 10px 16px;
+    font-size: 11px;
+    color: var(--cyan);
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+    z-index: 999;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+    max-width: 280px;
+    letter-spacing: 1px;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    to { opacity: 0; transform: translateX(20px); }
+  }
+
+  /* MODAL CONFIRM */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+    display: none;
+  }
+
+  .modal-box {
+    background: #000c14;
+    border: 1px solid var(--red);
+    padding: 30px;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255,34,68,0.3);
+  }
+
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px;
+    color: var(--red);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px var(--red);
+  }
+
+  .modal-text { font-size: 12px; color: var(--text); margin-bottom: 24px; line-height: 1.6; }
+
+  .modal-btns { display: flex; gap: 12px; justify-content: center; }
+
+  .modal-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 10px 24px;
+    cursor: pointer;
+    border: 1px solid;
+    transition: all 0.2s;
+    background: transparent;
+  }
+
+  .modal-btn.confirm { border-color: var(--red); color: var(--red); }
+  .modal-btn.confirm:hover { background: rgba(255,34,68,0.1); box-shadow: 0 0 15px rgba(255,34,68,0.3); }
+  .modal-btn.cancel { border-color: var(--border-bright); color: var(--text); }
+  .modal-btn.cancel:hover { background: var(--cyan-glow); }
+
+  /* CORNER DECORATIONS */
+  .corner-tl, .corner-tr, .corner-bl, .corner-br {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-color: var(--cyan);
+    border-style: solid;
+  }
+
+  .corner-tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .corner-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">J.<span>A</span>.R.V.I.<span>S</span>.</div>
+    <div class="header-center">
+      <div id="live-clock">00:00:00</div>
+      <div class="status-bar">
+        <div class="status-item"><div class="status-dot"></div>SYSTEMS NOMINAL</div>
+        <div class="status-item"><div class="status-dot cyan"></div>NEURAL NET ONLINE</div>
+        <div class="status-item"><div class="status-dot orange"></div>ARC REACTOR STABLE</div>
+      </div>
+    </div>
+    <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--text-dim);letter-spacing:2px;text-align:right;">
+      STARK INDUSTRIES<br>
+      <span style="color:var(--cyan);">v3.0.0</span>
+    </div>
+  </header>
+
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <!-- ARC REACTOR -->
+    <div class="panel">
+      <div class="panel-title">ARC REACTOR</div>
+      <div class="arc-reactor">
+        <div class="reactor-ring">
+          <svg viewBox="0 0 120 120" class="ring-outer">
+            <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(0,212,255,0.3)" stroke-width="1" stroke-dasharray="6 4"/>
+            <circle cx="60" cy="60" r="56" fill="none" stroke="rgba(0,212,255,0.6)" stroke-width="1.5" stroke-dasharray="20 340" stroke-linecap="round"/>
+          </svg>
+          <svg viewBox="0 0 120 120" class="ring-mid" style="position:absolute;inset:0;">
+            <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(0,212,255,0.2)" stroke-width="1" stroke-dasharray="4 6"/>
+            <circle cx="60" cy="60" r="44" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-dasharray="30 248" stroke-linecap="round"/>
+          </svg>
+          <svg viewBox="0 0 120 120" class="ring-inner" style="position:absolute;inset:0;">
+            <circle cx="60" cy="60" r="30" fill="none" stroke="rgba(0,212,255,0.4)" stroke-width="1" stroke-dasharray="8 4"/>
+          </svg>
+          <div class="reactor-core"></div>
+        </div>
+        <div class="reactor-pct" id="reactor-pct">100%</div>
+        <div class="reactor-label">POWER OUTPUT — STABLE</div>
+      </div>
+    </div>
+
+    <!-- SYSTEM STATS -->
+    <div class="panel">
+      <div class="panel-title">SYSTEM DIAGNOSTICS</div>
+      <div style="padding:8px 0;">
+        <div class="stat-row">
+          <div class="stat-label"><span>CPU LOAD</span><span id="cpu-val">--</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="cpu-bar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>MEMORY</span><span id="mem-val">--</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill orange-bar" id="mem-bar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>DISK</span><span id="disk-val">--</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="disk-bar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label"><span>NETWORK</span><span id="net-val">ONLINE</span></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="net-bar" style="width:85%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QUICK CONTROLS -->
+    <div class="panel">
+      <div class="panel-title">QUICK CONTROLS</div>
+      <div class="ctrl-grid">
+        <button class="ctrl-btn" onclick="triggerCmd('screenshot')"><span class="btn-icon">📸</span>SCREENSHOT</button>
+        <button class="ctrl-btn" onclick="triggerCmd('time')"><span class="btn-icon">🕐</span>DATE/TIME</button>
+        <button class="ctrl-btn" onclick="triggerCmd('system')"><span class="btn-icon">💻</span>SYS REPORT</button>
+        <button class="ctrl-btn" onclick="triggerCmd('joke')"><span class="btn-icon">😄</span>TELL JOKE</button>
+        <button class="ctrl-btn warn" onclick="triggerCmd('lock')"><span class="btn-icon">🔒</span>LOCK PC</button>
+        <button class="ctrl-btn warn" onclick="triggerCmd('restart')"><span class="btn-icon">🔄</span>RESTART</button>
+        <button class="ctrl-btn danger" onclick="confirmAction('shutdown')"><span class="btn-icon">⛔</span>SHUTDOWN</button>
+        <button class="ctrl-btn" onclick="triggerCmd('help')"><span class="btn-icon">❓</span>COMMANDS</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div id="center-panel">
+
+    <!-- VOICE VISUALIZER -->
+    <div class="panel viz-panel">
+      <div class="corner-tl"></div><div class="corner-tr"></div><div class="corner-bl"></div><div class="corner-br"></div>
+      <canvas id="waveform-canvas" height="60"></canvas>
+      <div style="display:flex;align-items:center;gap:20px;">
+        <button class="mic-btn" id="mic-btn" onclick="toggleListening()">🎤</button>
+        <div>
+          <div class="jarvis-state" id="jarvis-state">STANDBY</div>
+          <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;margin-top:4px;">CLICK MIC OR TYPE BELOW</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONSOLE -->
+    <div class="panel console">
+      <div class="panel-title">NEURAL INTERFACE — COMMAND LOG</div>
+      <div id="console-output"></div>
+      <div class="input-row">
+        <input type="text" id="text-input" placeholder="◈  ENTER COMMAND..." autocomplete="off"
+          onkeydown="if(event.key==='Enter') sendTextCmd()">
+        <button class="send-btn" onclick="sendTextCmd()">EXECUTE</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+
+    <!-- RADAR -->
+    <div class="panel">
+      <div class="panel-title">THREAT SCAN — SECTOR 7G</div>
+      <div class="radar-wrap">
+        <canvas id="radar-canvas" width="200" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- VOLUME -->
+    <div class="panel">
+      <div class="panel-title">AUDIO SYSTEMS</div>
+      <div class="vol-ctrl">
+        <div class="vol-row">
+          <div class="vol-label">MASTER</div>
+          <input type="range" min="0" max="100" value="75" id="vol-master"
+            oninput="updateVol('master', this.value)">
+          <span style="font-size:10px;color:var(--cyan);width:28px;" id="vol-master-val">75</span>
+        </div>
+        <div class="vol-row">
+          <div class="vol-label">SPEECH</div>
+          <input type="range" min="0" max="100" value="90" id="vol-speech"
+            oninput="updateVol('speech', this.value)">
+          <span style="font-size:10px;color:var(--cyan);width:28px;" id="vol-speech-val">90</span>
+        </div>
+        <div class="vol-row" style="margin-top:4px;">
+          <button class="ctrl-btn" style="flex:1;padding:6px;" onclick="triggerCmd('volume up')">▲ VOL UP</button>
+          <button class="ctrl-btn" style="flex:1;padding:6px;" onclick="triggerCmd('volume down')">▼ VOL DN</button>
+          <button class="ctrl-btn warn" style="flex:1;padding:6px;" onclick="triggerCmd('mute')">✕ MUTE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMMAND REFERENCE -->
+    <div class="panel" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="panel-title">COMMAND REFERENCE</div>
+      <div class="cmd-list" style="overflow-y:auto;flex:1;">
+        <div class="cmd-item" onclick="fillInput('search')"><span class="cmd-key">SEARCH</span>web search</div>
+        <div class="cmd-item" onclick="fillInput('youtube')"><span class="cmd-key">YOUTUBE</span>video search</div>
+        <div class="cmd-item" onclick="fillInput('news')"><span class="cmd-key">NEWS</span>bbc headlines</div>
+        <div class="cmd-item" onclick="fillInput('weather')"><span class="cmd-key">WEATHER</span>city forecast</div>
+        <div class="cmd-item" onclick="fillInput('wikipedia')"><span class="cmd-key">WIKI</span>look up topic</div>
+        <div class="cmd-item" onclick="fillInput('time')"><span class="cmd-key">TIME</span>current time</div>
+        <div class="cmd-item" onclick="fillInput('system')"><span class="cmd-key">SYSTEM</span>diagnostics</div>
+        <div class="cmd-item" onclick="fillInput('screenshot')"><span class="cmd-key">CAPTURE</span>screenshot</div>
+        <div class="cmd-item" onclick="fillInput('open chrome')"><span class="cmd-key">OPEN</span>launch app</div>
+        <div class="cmd-item" onclick="fillInput('joke')"><span class="cmd-key">JOKE</span>humor module</div>
+        <div class="cmd-item" onclick="fillInput('who are you')"><span class="cmd-key">IDENTITY</span>who is jarvis</div>
+        <div class="cmd-item" onclick="fillInput('goodbye')"><span class="cmd-key">EXIT</span>power down</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>STARK INDUSTRIES © 2026</span>
+    <div class="footer-ticker">
+      <div class="ticker-inner">
+        ◈ JARVIS v3.0 ONLINE ◈ ALL SYSTEMS OPERATIONAL ◈ ARC REACTOR: 100% ◈ NEURAL NETWORK: ACTIVE ◈ SPEECH ENGINE: READY ◈ THREAT LEVEL: MINIMAL ◈ MARK L ARMOR: STANDBY ◈ FRIDAY BACKUP: ONLINE ◈
+      </div>
+    </div>
+    <span id="uptime-counter">UPTIME: 00:00:00</span>
+  </footer>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">⚠ CONFIRM ACTION</div>
+    <div class="modal-text" id="modal-text">This action requires confirmation, Sir.</div>
+    <div class="modal-btns">
+      <button class="modal-btn confirm" id="modal-confirm">CONFIRM</button>
+      <button class="modal-btn cancel" onclick="closeModal()">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let listening = false;
+let recognition = null;
+let synth = window.speechSynthesis;
+let uptimeStart = Date.now();
+let animFrame;
+let radarAngle = 0;
+let radarBlips = [];
+let wavePhase = 0;
+let isSpeaking = false;
+let modalAction = null;
+
+// ─── CLOCK ───────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent =
+    now.toLocaleTimeString('en-US', { hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  const elapsed = Math.floor((Date.now() - uptimeStart) / 1000);
+  const h = String(Math.floor(elapsed / 3600)).padStart(2,'0');
+  const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2,'0');
+  const s = String(elapsed % 60).padStart(2,'0');
+  document.getElementById('uptime-counter').textContent = `UPTIME: ${h}:${m}:${s}`;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── FAKE SYSTEM STATS ───────────────────────────────────────
+function fakeStats() {
+  const cpu = Math.floor(20 + Math.random() * 40);
+  const mem = Math.floor(45 + Math.random() * 25);
+  const disk = Math.floor(60 + Math.random() * 15);
+
+  document.getElementById('cpu-val').textContent = cpu + '%';
+  document.getElementById('mem-val').textContent = mem + '%';
+  document.getElementById('disk-val').textContent = disk + '%';
+  document.getElementById('cpu-bar').style.width = cpu + '%';
+  document.getElementById('mem-bar').style.width = mem + '%';
+  document.getElementById('disk-bar').style.width = disk + '%';
+}
+
+fakeStats();
+setInterval(fakeStats, 3000);
+
+// ─── RADAR ───────────────────────────────────────────────────
+const radarCanvas = document.getElementById('radar-canvas');
+const rc = radarCanvas.getContext('2d');
+const RW = 200, RH = 200, RCX = 100, RCY = 100, RR = 90;
+
+// generate random blips
+for (let i = 0; i < 5; i++) {
+  const angle = Math.random() * Math.PI * 2;
+  const dist = Math.random() * RR * 0.85;
+  radarBlips.push({ angle, dist, life: Math.random() });
+}
+
+function drawRadar() {
+  rc.clearRect(0, 0, RW, RH);
+
+  // circles
+  rc.strokeStyle = 'rgba(0,212,255,0.2)';
+  rc.lineWidth = 1;
+  [0.33, 0.66, 1].forEach(f => {
+    rc.beginPath();
+    rc.arc(RCX, RCY, RR * f, 0, Math.PI * 2);
+    rc.stroke();
+  });
+
+  // crosshairs
+  rc.beginPath();
+  rc.moveTo(RCX - RR, RCY); rc.lineTo(RCX + RR, RCY);
+  rc.moveTo(RCX, RCY - RR); rc.lineTo(RCX, RCY + RR);
+  rc.strokeStyle = 'rgba(0,212,255,0.15)';
+  rc.stroke();
+
+  // sweep gradient
+  const sweepGrad = rc.createConicalGradient ? null : null;
+  rc.save();
+  rc.translate(RCX, RCY);
+  rc.rotate(radarAngle);
+  const g = rc.createLinearGradient(0, 0, RR, 0);
+  g.addColorStop(0, 'rgba(0,212,255,0.5)');
+  g.addColorStop(1, 'rgba(0,212,255,0)');
+  rc.beginPath();
+  rc.moveTo(0, 0);
+  rc.arc(0, 0, RR, -0.4, 0);
+  rc.closePath();
+  rc.fillStyle = g;
+  rc.fill();
+  rc.restore();
+
+  // sweep line
+  rc.save();
+  rc.translate(RCX, RCY);
+  rc.rotate(radarAngle);
+  rc.beginPath();
+  rc.moveTo(0, 0);
+  rc.lineTo(RR, 0);
+  rc.strokeStyle = 'rgba(0,212,255,0.8)';
+  rc.lineWidth = 1.5;
+  rc.stroke();
+  rc.restore();
+
+  // blips
+  radarBlips.forEach(b => {
+    const diff = ((radarAngle - b.angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    if (diff < Math.PI * 2) b.life = Math.max(0, b.life - 0.005);
+    if (diff < 0.2) b.life = 1;
+
+    const bx = RCX + Math.cos(b.angle) * b.dist;
+    const by = RCY + Math.sin(b.angle) * b.dist;
+    rc.beginPath();
+    rc.arc(bx, by, 3, 0, Math.PI * 2);
+    rc.fillStyle = `rgba(0,255,136,${b.life})`;
+    rc.shadowBlur = 8;
+    rc.shadowColor = '#00ff88';
+    rc.fill();
+    rc.shadowBlur = 0;
+  });
+
+  radarAngle += 0.025;
+  requestAnimationFrame(drawRadar);
+}
+
+drawRadar();
+
+// ─── WAVEFORM ────────────────────────────────────────────────
+const waveCanvas = document.getElementById('waveform-canvas');
+const wc = waveCanvas.getContext('2d');
+
+function drawWave() {
+  const W = waveCanvas.offsetWidth || 600;
+  waveCanvas.width = W;
+  waveCanvas.height = 60;
+  wc.clearRect(0, 0, W, 60);
+
+  const amp = listening ? 18 : (isSpeaking ? 12 : 4);
+  const freq = listening ? 0.04 : 0.02;
+
+  wc.beginPath();
+  wc.strokeStyle = listening ? 'rgba(255,107,0,0.8)' : 'rgba(0,212,255,0.6)';
+  wc.lineWidth = 1.5;
+  wc.shadowBlur = listening ? 12 : 6;
+  wc.shadowColor = listening ? '#ff6b00' : '#00d4ff';
+
+  for (let x = 0; x < W; x++) {
+    const noise = (Math.random() - 0.5) * (listening ? 6 : 1);
+    const y = 30 + Math.sin(x * freq + wavePhase) * amp
+              + Math.sin(x * freq * 2.3 + wavePhase * 1.3) * (amp * 0.4)
+              + noise;
+    x === 0 ? wc.moveTo(x, y) : wc.lineTo(x, y);
+  }
+  wc.stroke();
+  wc.shadowBlur = 0;
+
+  wavePhase += listening ? 0.15 : 0.04;
+  requestAnimationFrame(drawWave);
+}
+
+drawWave();
+
+// ─── CONSOLE LOGGING ─────────────────────────────────────────
+function log(tag, text, cls = 'tag-jarvis') {
+  const out = document.getElementById('console-output');
+  const now = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `
+    <span class="log-time">${now}</span>
+    <span class="log-tag ${cls}">${tag}</span>
+    <span class="log-text">${text}</span>
+  `;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+
+// ─── SPEECH SYNTHESIS ────────────────────────────────────────
+function speak(text) {
+  if (!synth) return;
+  synth.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.95;
+  utt.pitch = 0.85;
+  utt.volume = document.getElementById('vol-speech').value / 100;
+
+  const voices = synth.getVoices();
+  const pref = voices.find(v => v.name.toLowerCase().includes('david') ||
+                                 v.name.toLowerCase().includes('google uk') ||
+                                 v.name.toLowerCase().includes('male'));
+  if (pref) utt.voice = pref;
+
+  utt.onstart = () => { isSpeaking = true; setState('SPEAKING'); };
+  utt.onend = () => { isSpeaking = false; setState(listening ? 'LISTENING' : 'STANDBY'); };
+  synth.speak(utt);
+}
+
+// ─── STATE DISPLAY ───────────────────────────────────────────
+function setState(s) {
+  document.getElementById('jarvis-state').textContent = s;
+}
+
+// ─── SPEECH RECOGNITION ──────────────────────────────────────
+function setupSpeech() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    log('SYS', 'Speech recognition not available in this browser. Use Chrome.', 'tag-err');
+    return null;
+  }
+  const rec = new SpeechRec();
+  rec.continuous = false;
+  rec.interimResults = false;
+  rec.lang = 'en-US';
+
+  rec.onresult = e => {
+    const transcript = e.results[0][0].transcript;
+    log('YOU', transcript, 'tag-you');
+    processCommand(transcript.toLowerCase());
+  };
+
+  rec.onend = () => {
+    if (listening) {
+      try { rec.start(); } catch(e) {}
+    }
+  };
+
+  rec.onerror = e => {
+    if (e.error !== 'no-speech') {
+      log('ERR', `Speech error: ${e.error}`, 'tag-err');
+    }
+  };
+
+  return rec;
+}
+
+function toggleListening() {
+  const btn = document.getElementById('mic-btn');
+  listening = !listening;
+
+  if (listening) {
+    if (!recognition) recognition = setupSpeech();
+    if (!recognition) { listening = false; return; }
+    try {
+      recognition.start();
+      btn.classList.add('listening');
+      setState('LISTENING');
+      btn.textContent = '🔴';
+      log('SYS', 'Voice recognition activated. Awaiting command, Sir.', 'tag-sys');
+      speak('Voice interface activated. Awaiting your command, Sir.');
+    } catch(e) {
+      log('ERR', 'Could not start microphone.', 'tag-err');
+      listening = false;
+    }
+  } else {
+    if (recognition) { try { recognition.stop(); } catch(e) {} }
+    btn.classList.remove('listening');
+    setState('STANDBY');
+    btn.textContent = '🎤';
+    log('SYS', 'Voice recognition deactivated.', 'tag-sys');
+  }
+}
+
+// ─── TEXT INPUT ──────────────────────────────────────────────
+function sendTextCmd() {
+  const inp = document.getElementById('text-input');
+  const val = inp.value.trim();
+  if (!val) return;
+  log('YOU', val, 'tag-you');
+  processCommand(val.toLowerCase());
+  inp.value = '';
+}
+
+function fillInput(text) {
+  document.getElementById('text-input').value = text;
+  document.getElementById('text-input').focus();
+}
+
+// ─── COMMAND PROCESSOR ───────────────────────────────────────
+const GREET_LINES = [
+  "Welcome back, Sir. All systems are operational.",
+  "Good to have you back, Sir. How can I assist?",
+  "Ah, you're home. I've kept everything running smoothly.",
+  "Sir! Daddy's home. The arc reactor missed you.",
+  "All systems online. Ready to serve, Sir.",
+];
+
+const JOKES = [
+  "Why don't scientists trust atoms? Because they make up everything.",
+  "I tried to make a chemistry joke but I knew I would get no reaction.",
+  "Why did the scarecrow win an award? Because he was outstanding in his field.",
+  "I'm reading a book about anti-gravity. It's impossible to put down.",
+  "Sir, I have an infinite number of jokes, but I'll spare you for now.",
+];
+
+const UNKNOWN = [
+  "I'm not sure I understood that, Sir. Could you rephrase it?",
+  "Pardon, Sir? The audio was unclear.",
+  "I didn't catch that. Try again, Sir.",
+  "My apologies — could you rephrase that, Sir?",
+];
+
+function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function processCommand(cmd) {
+  setState('PROCESSING');
+
+  setTimeout(() => {
+    // EXIT
+    if (['goodbye','bye','exit','quit'].some(w => cmd.includes(w))) {
+      const msg = "Signing off. The mansion is in good hands. Goodbye, Sir.";
+      jarvisReply(msg);
+      setTimeout(() => { document.body.style.animation = 'fadeOut 2s forwards'; }, 2000);
+      return;
+    }
+
+    // GREETING / IDENTITY
+    if (['who are you','your name','what are you'].some(w => cmd.includes(w))) {
+      jarvisReply("I am J.A.R.V.I.S., Sir. Just A Rather Very Intelligent System. Your faithful AI assistant.");
+      return;
+    }
+
+    if (['hello','hi jarvis','hey jarvis','wake up','daddy'].some(w => cmd.includes(w))) {
+      jarvisReply(rand(GREET_LINES));
+      return;
+    }
+
+    // WEB SEARCH
+    if (cmd.includes('search') && !cmd.includes('youtube')) {
+      const q = cmd.replace(/search(?: for)?/,'').trim() || promptQuery('search query');
+      if (q) {
+        jarvisReply(`Searching for "${q}" now, Sir.`);
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank');
+      }
+      return;
+    }
+
+    // YOUTUBE
+    if (cmd.includes('youtube')) {
+      const q = cmd.replace(/youtube|search|play|watch/g,'').trim() || 'trending';
+      jarvisReply(`Opening YouTube for "${q}", Sir.`);
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`, '_blank');
+      return;
+    }
+
+    // NEWS
+    if (cmd.includes('news') || cmd.includes('headline')) {
+      jarvisReply("Opening BBC News for the latest headlines, Sir.");
+      window.open('https://www.bbc.com/news', '_blank');
+      return;
+    }
+
+    // WEATHER
+    if (cmd.includes('weather')) {
+      const city = cmd.replace(/weather|in|for|check/g,'').trim() || 'current location';
+      jarvisReply(`Fetching weather report for ${city}, Sir.`);
+      window.open(`https://www.google.com/search?q=weather+in+${encodeURIComponent(city)}`, '_blank');
+      return;
+    }
+
+    // WIKIPEDIA
+    if (cmd.includes('wikipedia') || cmd.includes('wiki')) {
+      const q = cmd.replace(/wikipedia|wiki|search|look up|about/g,'').trim() || 'artificial intelligence';
+      jarvisReply(`Looking up "${q}" on Wikipedia, Sir.`);
+      window.open(`https://en.wikipedia.org/wiki/${encodeURIComponent(q)}`, '_blank');
+      return;
+    }
+
+    // TIME / DATE
+    if (cmd.includes('time') || cmd.includes('date') || cmd.includes('day')) {
+      const now = new Date();
+      const ds = now.toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+      const ts = now.toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      jarvisReply(`The current date is ${ds}, and the time is ${ts}, Sir.`);
+      return;
+    }
+
+    // SYSTEM INFO
+    if (['system','cpu','memory','performance','diagnostic'].some(w => cmd.includes(w))) {
+      const cpu = Math.floor(20 + Math.random() * 40);
+      const mem = Math.floor(45 + Math.random() * 25);
+      jarvisReply(`System report, Sir. CPU usage is approximately ${cpu} percent. Memory is at ${mem} percent. All systems nominal.`);
+      fakeStats();
+      return;
+    }
+
+    // SCREENSHOT
+    if (cmd.includes('screenshot') || cmd.includes('screen capture')) {
+      jarvisReply("Screenshot functionality requires the desktop Python backend, Sir. Triggering via backend.");
+      showNotif("📸 Screenshot command sent to backend");
+      return;
+    }
+
+    // VOLUME
+    if (cmd.includes('volume') || cmd.includes('mute')) {
+      if (cmd.includes('up') || cmd.includes('increase')) {
+        const cur = parseInt(document.getElementById('vol-master').value);
+        const nv = Math.min(100, cur + 15);
+        document.getElementById('vol-master').value = nv;
+        document.getElementById('vol-master-val').textContent = nv;
+        jarvisReply(`Volume increased to ${nv} percent, Sir.`);
+      } else if (cmd.includes('down') || cmd.includes('lower') || cmd.includes('decrease')) {
+        const cur = parseInt(document.getElementById('vol-master').value);
+        const nv = Math.max(0, cur - 15);
+        document.getElementById('vol-master').value = nv;
+        document.getElementById('vol-master-val').textContent = nv;
+        jarvisReply(`Volume decreased to ${nv} percent, Sir.`);
+      } else if (cmd.includes('mute')) {
+        document.getElementById('vol-master').value = 0;
+        document.getElementById('vol-master-val').textContent = 0;
+        jarvisReply("Audio muted, Sir.");
+      }
+      return;
+    }
+
+    // OPEN APP
+    if (['open','launch','start'].some(w => cmd.includes(w))) {
+      const apps = {
+        'notepad': 'notepad.exe', 'calculator': 'calc.exe', 'paint': 'mspaint.exe',
+        'chrome': 'https://www.google.com', 'firefox': 'https://www.mozilla.org',
+        'youtube': 'https://youtube.com', 'gmail': 'https://mail.google.com',
+      };
+      for (const [name, target] of Object.entries(apps)) {
+        if (cmd.includes(name)) {
+          jarvisReply(`Opening ${name.charAt(0).toUpperCase()+name.slice(1)}, Sir.`);
+          if (target.startsWith('http')) window.open(target, '_blank');
+          else showNotif(`⚙ Launch command sent: ${target}`);
+          return;
+        }
+      }
+      jarvisReply("I don't know how to open that application, Sir. Is it installed?");
+      return;
+    }
+
+    // LOCK
+    if (cmd.includes('lock')) {
+      jarvisReply("Lock command sent to backend, Sir. Locking workstation.");
+      showNotif("🔒 Lock PC command sent");
+      return;
+    }
+
+    // SHUTDOWN
+    if (cmd.includes('shutdown') || cmd.includes('shut down') || cmd.includes('power off')) {
+      confirmAction('shutdown');
+      return;
+    }
+
+    // RESTART
+    if (cmd.includes('restart') || cmd.includes('reboot')) {
+      confirmAction('restart');
+      return;
+    }
+
+    // JOKE
+    if (cmd.includes('joke') || cmd.includes('funny')) {
+      jarvisReply(rand(JOKES));
+      return;
+    }
+
+    // HELP
+    if (cmd.includes('help') || cmd.includes('commands') || cmd.includes('what can you do')) {
+      jarvisReply("Available commands: search, youtube, news, weather, wikipedia, time, system, screenshot, open [app], volume up/down/mute, lock, shutdown, restart, joke. Click any command in the reference panel, Sir.");
+      return;
+    }
+
+    // FALLBACK
+    jarvisReply(rand(UNKNOWN));
+
+  }, 400);
+}
+
+function jarvisReply(text) {
+  log('JARVIS', text, 'tag-jarvis');
+  speak(text);
+  setState('SPEAKING');
+}
+
+// ─── TRIGGER FROM BUTTONS ────────────────────────────────────
+function triggerCmd(cmd) {
+  log('YOU', `[button: ${cmd}]`, 'tag-you');
+  processCommand(cmd.toLowerCase());
+}
+
+// ─── VOLUME SLIDERS ──────────────────────────────────────────
+function updateVol(type, val) {
+  document.getElementById(`vol-${type}-val`).textContent = val;
+}
+
+// ─── MODAL ───────────────────────────────────────────────────
+function confirmAction(action) {
+  modalAction = action;
+  document.getElementById('modal-title').textContent = `⚠ CONFIRM ${action.toUpperCase()}`;
+  document.getElementById('modal-text').textContent =
+    action === 'shutdown'
+      ? "Are you sure you want to shut down the system, Sir? This will terminate all processes."
+      : "Confirm system restart, Sir. All unsaved work will be lost.";
+  document.getElementById('modal-confirm').onclick = executeModal;
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function executeModal() {
+  closeModal();
+  if (modalAction === 'shutdown') {
+    jarvisReply("Shutting down the system. Goodbye, Sir. It's been an honour.");
+    showNotif("⛔ Shutdown command sent to backend");
+  } else {
+    jarvisReply("Restarting now, Sir. I'll be back shortly.");
+    showNotif("🔄 Restart command sent to backend");
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  modalAction = null;
+}
+
+// ─── NOTIFICATIONS ───────────────────────────────────────────
+function showNotif(msg) {
+  const n = document.createElement('div');
+  n.className = 'notif';
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 3200);
+}
+
+// ─── BOOT SEQUENCE ───────────────────────────────────────────
+window.addEventListener('load', () => {
+  synth.getVoices(); // load voices
+
+  const bootMsgs = [
+    { tag: 'SYS', msg: 'Initializing J.A.R.V.I.S. v3.0...', cls: 'tag-sys' },
+    { tag: 'SYS', msg: 'Loading speech recognition engine...', cls: 'tag-sys' },
+    { tag: 'SYS', msg: 'Connecting to neural inference module...', cls: 'tag-sys' },
+    { tag: 'SYS', msg: 'Running system diagnostics... OK', cls: 'tag-sys' },
+    { tag: 'SYS', msg: 'Arc reactor: STABLE — 100% output', cls: 'tag-sys' },
+    { tag: 'SYS', msg: '>>> JARVIS ONLINE <<<', cls: 'tag-sys' },
+  ];
+
+  bootMsgs.forEach((m, i) => {
+    setTimeout(() => log(m.tag, m.msg, m.cls), i * 350);
+  });
+
+  setTimeout(() => {
+    const greeting = rand(GREET_LINES);
+    log('JARVIS', greeting, 'tag-jarvis');
+    setTimeout(() => speak(greeting), 200);
+  }, bootMsgs.length * 350 + 200);
+});
+
+// keyboard shortcut: Ctrl+M = toggle mic
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'm') { e.preventDefault(); toggleListening(); }
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
