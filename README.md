@@ -30,10 +30,4 @@ AI-Powered-Data-Automation-System is a Python-based voice-enabled AI assistant i
 - Wikipedia API
 - psutil
 
-## Installation
 
-### Clone the Repository
-
-```bash
-git clone https://github.com/your-username/AI-Powered-Data-Automation-System.git
-cd AI-Powered-Data-Automation-System
