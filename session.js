@@ -248,3 +248,35 @@ app.use(express.static(path.join(__dirname, "..")));
 app.listen(PORT, () => {
   console.log(`One Portal backend running at http://localhost:${PORT}`);
 });
+
+
+
+
+
+
+-- ===========================================================
+-- Run this ONCE in SSMS against your existing one_portal
+-- database to add the Interview Agent as a new tool, and
+-- enable it on one project (Navista Location Mapping, id 1)
+-- as an example — change the project_id below to enable it
+-- elsewhere too.
+-- ===========================================================
+
+USE one_portal;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM tools WHERE slug = 'interview-agent')
+BEGIN
+  INSERT INTO tools (slug, name, description) VALUES
+    ('interview-agent', 'Interview Assessment', 'Runs a structured technical interview and evaluates the transcript against a question bank');
+END
+
+-- Enable it on project id 1 (change this id to whichever project should have it)
+IF NOT EXISTS (
+  SELECT 1 FROM project_tools
+  WHERE project_id = 1 AND tool_id = (SELECT id FROM tools WHERE slug = 'interview-agent')
+)
+BEGIN
+  INSERT INTO project_tools (project_id, tool_id)
+  VALUES (1, (SELECT id FROM tools WHERE slug = 'interview-agent'));
+END
