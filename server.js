@@ -1,1 +1,1 @@
-curl.exe -X POST http://localhost:3000/api/interview-evaluate -H "Content-Type: application/json" -d '{"transcript":"test"}'
+Invoke-RestMethod -Uri "http://localhost:3000/api/interview-evaluate" -Method Post -ContentType "application/json" -Body '{"transcript":"test"}'
