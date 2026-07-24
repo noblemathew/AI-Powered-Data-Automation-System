@@ -1,0 +1,99 @@
+<div class="modal-overlay" id="agentResponseModal">
+  <div class="modal" style="max-width:520px;">
+    <h3 id="agentResponseTitle">Agent Response</h3>
+    <div id="agentResponseBody" style="max-height:360px; overflow-y:auto; white-space:pre-wrap; font-size:13px; line-height:1.6; background:#FAFBFD; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:16px;"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="closeAgentResponseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+
+
+find: <div class="container" id="startScreen">
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo-slot">
+        <img src="../../assets/logo.png" alt="Company logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="mark" style="display:none;">OP</div>
+        <div class="name">One Portal</div>
+      </div>
+    </div>
+    <nav>
+      <a class="nav-link" id="backToProjectLink" href="#"><span class="ico">&#8592;</span> Back to project</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="sidebar-user">
+        <div class="mini-avatar" id="sidebarAvatar">?</div>
+        <span id="sidebarName">…</span>
+      </div>
+      <a class="logout-link" href="#" id="logoutLink"><span class="ico">&#8630;</span> Sign out</a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="content">
+
+
+find:
+</script>
+</body>
+</html>
+
+
+</div><!-- /.content -->
+  </div><!-- /.main -->
+</div><!-- /.shell -->
+</script>
+</body>
+</html>
+
+
+Find (inside sendToAgent(), the success case):
+alert(
+  "Status: " + response.status +
+  "\n\nResponse:\n" + text
+);
+
+
+showAgentResponse(response.status, text);
+
+find:
+alert(
+  "ERROR:\n" +
+  error.message
+);
+
+showAgentResponse(0, "Error: " + error.message);
+
+find:
+function escapeHtml(value){return String(value||"").replace(...
+
+function showAgentResponse(status, text) {
+  document.getElementById("agentResponseTitle").textContent =
+    status >= 200 && status < 300 ? "Evaluation complete" : `Error (Status ${status})`;
+  document.getElementById("agentResponseBody").textContent = text;
+  document.getElementById("agentResponseModal").classList.add("show");
+}
+document.getElementById("closeAgentResponseBtn").addEventListener("click", () => {
+  document.getElementById("agentResponseModal").classList.remove("show");
+});
+
+(async function initShell() {
+  const me = await requireSession();
+  if (!me) return;
+  document.getElementById("sidebarAvatar").textContent = initials(me.display_name || me.email);
+  document.getElementById("sidebarName").textContent = me.display_name || me.email;
+
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get("project");
+  document.getElementById("backToProjectLink").href =
+    projectId ? `../../project.html?id=${projectId}` : "../../dashboard.html";
+
+  document.getElementById("logoutLink").addEventListener("click", (e) => {
+    e.preventDefault();
+    logout("../../index.html");
+  });
+})();
